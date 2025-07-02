@@ -15,8 +15,9 @@ class zmd_PerkMachine : zmd_Interactable {
     }
 
     override void doTouch(PlayerPawn player) {
-        if (player.countInv(self.drink) == 0 && player.findInventory(getDefaultByType(self.drink).perk) == null)
-            zmd_HintHud(player.findInventory('zmd_HintHud')).setMessage(self.costOf(self.cost));
+        if (player.countInv(self.drink) == 0 && player.findInventory(getDefaultByType(self.drink).perk) == null) {
+            zmd_InventoryManager.fetchFrom(player).hintOverlay.set(self.costOf(self.cost));
+		}
     }
 
     override bool doUse(PlayerPawn player) {
@@ -160,21 +161,29 @@ class zmd_Bottle : Rocket {
     }
 }
 
-class zmd_PerkHud : zmd_HudItem {
-    const offsetDelta = 15;
+class zmd_PerkOverlay : zmd_OverlayItem {
+    const offsetDelta = 13;
 
     Array<zmd_PerkIcon> icons;
     int offset;
 
-    override void draw(zmd_Hud hud, int state, double tickFrac) {
+	static zmd_PerkOverlay create() {
+		let self = new('zmd_PerkOverlay');
+		return self;
+	}
+
+	override void update(zmd_InventoryManager manager) {}
+
+    override void render(RenderEvent e) {
         foreach (icon : self.icons)
-            icon.draw(hud, state, tickFrac);
+            icon.render(e);
     }
 
     void add(Inventory perk) {
         let perkIcon = new('zmd_PerkIcon');
         perkIcon.perk = perk;
-        perkIcon.offset = self.offset;
+        perkIcon.offsetX = self.offset;
+		perkIcon.texture = perk.icon;
         self.icons.push(perkIcon);
         self.offset += self.offsetDelta;
     }
@@ -185,11 +194,17 @@ class zmd_PerkHud : zmd_HudItem {
     }
 }
 
-class zmd_PerkIcon : zmd_HudElement {
-    Inventory perk;
-    int offset;
+class zmd_PerkIcon : zmd_OverlayItem {
+	const offsetY = zmd_Overlay.margin + 17;
+	const scale = 0.25;
 
-    override void draw(zmd_Hud hud, int state, double tickFrac) {
-        hud.drawInventoryIcon(self.perk, (15 + self.offset, -23), hud.di_screen_left_bottom, scale: (0.3, 0.3));
+    Inventory perk;
+    int offsetX;
+	TextureId texture;
+
+	override void update(zmd_InventoryManager manager) {}
+
+    override void render(RenderEvent e) {
+        Screen.drawTexture(self.texture, false, self.offsetX + zmd_Overlay.margin, zmd_PerkIcon.offsetY, dta_scaleX, zmd_PerkIcon.scale, dta_scaleY, zmd_PerkIcon.scale, dta_320x200, true);
     }
 }

@@ -23,13 +23,14 @@ GameInfo {
         "zmd_Rounds", "zmd_MysteryBoxPool", "zmd_Spawning",
         "zmd_MysteryBoxHandler", "zmd_DropPool", "zmd_Switching",
         "zmd_RepulsionHandler", "zmd_PointsHandler", "zmd_InventoryGiver",
-        "zmd_LastStandWeaponPool", "zmd_PickupDropHandler"
+        "zmd_LastStandWeaponPool", "zmd_PickupDropHandler", "zmd_Overlay",
+		"nacht_IntroOverlay"
 }
 
 DoomEdNums {
     1003 = "zmd_Spawner"
     1004 = "zmd_MysteryBox"
-    1005 = "zmd_Barrel"
+    1005 = "nacht_Barrel"
     1007 = "zmd_HelpDoor"
     1008 = "zmd_MysteryBoxLocation"
     1009 = "zmd_QuickReviveMachine"
@@ -37,9 +38,9 @@ DoomEdNums {
     1011 = "zmd_SpeedColaMachine"
     1012 = "zmd_DoubleTapMachine"
     1013 = "zmd_Boxes"
-    1014 = "zmd_SwayTarget"
+    1014 = "nacht_SwayTarget"
     1015 = "zmd_Zombie"
-    1016 = "zmd_Plane"
+    1016 = "nacht_Plane"
 
     1050 = "Kar98Drawing"
     1051 = "CarbineDrawing"

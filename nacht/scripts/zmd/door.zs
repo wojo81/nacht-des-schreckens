@@ -13,7 +13,7 @@ class zmd_Door : zmd_Interactable {
     }
 
     override void doTouch(PlayerPawn player) {
-        zmd_HintHud(player.findInventory('zmd_HintHud')).setMessage(self.costOf(cost));
+		zmd_InventoryManager.fetchFrom(player).hintOverlay.set(self.costOf(cost));
     }
 
     override bool doUse(PlayerPawn player) {

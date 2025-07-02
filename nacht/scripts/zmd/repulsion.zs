@@ -40,16 +40,19 @@ class zmd_RepulsionHandler : EventHandler {
 
     void activate() {
         foreach (player : players) {
-            if (player.mo != null)
-                zmd_Repulsion.giveTo(player.mo, self);
+			let player = player.mo;
+            if (player != null) {
+                zmd_Repulsion.giveTo(player, self);
+			}
         }
     }
 
     void deactivate() {
         self.rounds.nextRound();
         foreach (player : players) {
-            if (player.mo != null) {
-                player.mo.takeInventory('zmd_Repulsion', 1);
+			let player = player.mo;
+            if (player != null) {
+                player.takeInventory('zmd_Repulsion', 1);
             }
         }
     }

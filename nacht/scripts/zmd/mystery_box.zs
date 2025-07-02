@@ -30,14 +30,16 @@ class zmd_MysteryBox : zmd_Interactable {
     }
 
     override void doTouch(PlayerPawn player) {
-        if (player.countInv('zmd_FireSalePower') != 0)
-            zmd_HintHud(player.findInventory('zmd_HintHud')).setMessage(self.costOf(self.discountCost));
-        else
-            zmd_HintHud(player.findInventory('zmd_HintHud')).setMessage(self.costOf(self.regularCost));
-    }
+		let manager = zmd_InventoryManager.fetchFrom(player);
+        if (player.findInventory('zmd_FireSalePower')) {
+			manager.hintOverlay.set(self.costOf(self.discountCost));
+        } else {
+			manager.hintOverlay.set(self.costOf(self.regularCost));
+		}
+	}
 
     override bool doUse(PlayerPawn player) {
-        if ((player.countInv('zmd_FireSalePower') != 0 && zmd_Points.takeFrom(player, self.discountCost)) || zmd_Points.takeFrom(player, self.regularCost)) {
+        if ((player.findInventory('zmd_FireSalePower') && zmd_Points.takeFrom(player, self.discountCost)) || zmd_Points.takeFrom(player, self.regularCost)) {
             self.open(player);
             return true;
         }

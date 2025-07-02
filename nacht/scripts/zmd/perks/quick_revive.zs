@@ -61,4 +61,9 @@ class zmd_QuickRevive : zmd_Perk {
     }
 }
 
-class zmd_Revive : zmd_QuickRevive {}
+class zmd_Revive : zmd_QuickRevive {
+	override void detachFromOwner() {
+		super.detachFromOwner();
+		console.printf("\cf"..self.owner.player.getUserName().."\cj was revived!");
+	}
+}

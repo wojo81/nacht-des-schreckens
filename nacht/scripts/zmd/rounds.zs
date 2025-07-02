@@ -16,7 +16,7 @@ class zmd_Rounds : EventHandler {
     zmd_DropPool dropPool;
     zmd_RepulsionHandler repulsionHandler;
 
-    static zmd_Rounds fetch() {
+    clearscope static zmd_Rounds fetch() {
         return zmd_Rounds(EventHandler.find('zmd_Rounds'));
     }
 
@@ -24,7 +24,6 @@ class zmd_Rounds : EventHandler {
         self.dropPool = zmd_DropPool.fetch();
         self.spawning = zmd_Spawning.init(self);
         zmd_RepulsionHandler.bindWith(self);
-        self.isTransitioning = true;
     }
 
     override void worldThingDied(WorldEvent e) {
@@ -68,9 +67,10 @@ class zmd_Rounds : EventHandler {
             s_startSound(self.beginRoundSound, chan_auto);
 
         foreach (player : players) {
-            if (player.mo != null && player.mo.countInv('zmd_Spectate') != 0) {
-                player.mo.a_takeInventory('zmd_Spectate', 1);
-                zmd_InventoryManager(player.mo.findInventory('zmd_InventoryManager')).reset();
+			let player = player.mo;
+            if (player != null && player.countInv('zmd_Spectate') != 0) {
+                player.takeInventory('zmd_Spectate', 1);
+                zmd_InventoryManager.fetchFrom(player).reset();
             }
         }
     }
@@ -114,25 +114,26 @@ class zmd_RoundDelay : Thinker {
     }
 }
 
-class zmd_RoundHud : zmd_HudItem {
-    const fadeInDelay = 35 * 2;
-    const fadeOutDelay = 35 * 5;
-    const flashDelay = 35;
+class zmd_RoundsOverlay : zmd_OverlayItem {
+	const fadeInDelay = 35 * 2;
+	const fadeOutDelay = 35 * 5;
+	const flashDelay = 35;
 
-    zmd_Rounds rounds;
-    bool isTransitioning;
-    int ticksSinceTransition;
-    int color;
-    double alpha;
+	zmd_Rounds rounds;
+	int ticksSinceTransition;
+	int color;
+	double alpha;
 
-    override void beginPlay() {
-        self.rounds = zmd_Rounds.fetch();
-        self.ticksSinceTransition = self.fadeInDelay;
-        self.color = Font.cr_red;
-    }
+	static zmd_RoundsOverlay create() {
+		zmd_RoundsOverlay overlay = new('zmd_RoundsOverlay');
+		overlay.rounds = zmd_Rounds.fetch();
+		overlay.color = Font.cr_red;
+		overlay.alpha = 1.0;
+		return overlay;
+	}
 
-    override void update() {
-        if (self.rounds.isTransitioning) {
+	override void update(zmd_InventoryManager manager) {
+		if (self.rounds.isTransitioning) {
             if (self.ticksSinceTransition == self.fadeOutDelay) {
                 self.alpha = 0.0;
                 self.color = Font.cr_red;
@@ -145,11 +146,11 @@ class zmd_RoundHud : zmd_HudItem {
             if (self.ticksSinceTransition == self.fadeOutDelay)
                 self.ticksSinceTransition = self.fadeInDelay;
             --self.ticksSinceTransition;
-            self.alpha = (self.fadeInDelay - self.ticksSinceTransition) / double(self.fadeInDelay);
+            self.alpha = double(self.fadeInDelay - self.ticksSinceTransition) / self.fadeInDelay;
         }
-    }
+	}
 
-    override void draw(zmd_Hud hud, int state, double tickFrac) {
-        hud.drawString(hud.defaultFont, ''..self.rounds.currentRound, (hud.right_margin - 10, hud.margin), hud.di_screen_right_top | hud.di_item_right_top, translation: self.color, alpha: self.alpha);
-    }
+	override void render(RenderEvent e) {
+		zmd_Overlay.rightText(bigFont, self.color, zmd_Overlay.margin, ''..self.rounds.currentRound, self.alpha);
+	}
 }

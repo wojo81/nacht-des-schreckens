@@ -27,9 +27,7 @@ class zmd_Regen : Inventory {
     override void attachToOwner(Actor owner) {
         super.attachToOwner(owner);
         self.maxHealth = getDefaultByType('zmd_vitality').amount;
-        if (self.owner.health < self.maxHealth) {
-            self.owner.giveInventory('zmd_vitality', self.maxHealth - self.owner.health);
-        }
+        self.owner.a_setHealth(self.maxHealth);
     }
 
     override void modifyDamage(int damage, Name damageType, out int newDamage, bool passive, Actor inflictor, Actor source, int flags) {
@@ -40,7 +38,7 @@ class zmd_Regen : Inventory {
     }
 
     override void doEffect() {
-// 		console.printf("%d", self.owner.health);
+// 		console.printf(''..self.owner.health);
         if (self.shouldHeal) {
             if (self.owner.health >= self.maxHealth) {
                 self.shouldHeal = false;

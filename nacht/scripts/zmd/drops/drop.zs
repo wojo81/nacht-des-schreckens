@@ -14,13 +14,14 @@ class zmd_Drop : CustomInventory {
     }
 
     action void giveAll(name item, int amount = 1) {
-        ScriptUtil.giveInventory(null, item, amount);
+        scriptUtil.giveInventory(null, item, amount);
     }
 }
 
 class zmd_Powerup : Powerup {
     Default {
         Powerup.duration 30 * 35;
+		+Inventory.unclearable;
     }
 
     override TextureId getPowerupIcon() {
@@ -29,7 +30,7 @@ class zmd_Powerup : Powerup {
 
     override void attachToOwner(Actor owner) {
         super.attachToOwner(owner);
-        zmd_PowerupHud(owner.findInventory('zmd_PowerupHud')).add(self, self.effectTics);
+		zmd_InventoryManager.fetchFrom(owner).powerupOverlay.add(self);
     }
 }
 
@@ -87,16 +88,20 @@ class zmd_DropPool : EventHandler {
     }
 }
 
-class zmd_PowerupHud : zmd_HudItem {
+class zmd_PowerupOverlay : zmd_OverlayItem {
     const offsetDelta = 13;
 
     Array<zmd_PowerupIcon> icons;
 
-    override void update() {
+	static zmd_PowerupOverlay create() {
+		return new('zmd_PowerupOverlay');
+	}
+
+    override void update(zmd_InventoryManager manager) {
         for (let i = 0; i != icons.size(); ++i) {
             let icon = icons[i];
-            icon.update();
-            if (icon.ticksLeft == 0) {
+            icon.update(manager);
+            if (icon.power == null) {
                 icons.delete(i);
                 for (let j = 0; j != i; ++j)
                     icons[j].offset += self.offsetDelta;
@@ -107,52 +112,54 @@ class zmd_PowerupHud : zmd_HudItem {
         }
     }
 
-    override void draw(zmd_Hud hud, int state, double tickFrac) {
+    override void render(RenderEvent e) {
         foreach (icon : self.icons)
-            icon.draw(hud, state, tickFrac);
+            icon.render(e);
     }
 
-    void add(Inventory powerup, int ticksLeft) {
+    void add(Powerup power) {
         for (int i = 0; i != self.icons.size(); ++i) {
             let icon = self.icons[i];
-            if (powerup.getClass() == icon.powerup.getClass()) {
-                icon.reset(ticksLeft);
+            if (power.getClass() == icon.power.getClass()) {
                 for (int j = 0; j != i; ++j)
                     self.icons[j].offset += self.offsetDelta;
                 return;
             }
             icon.offset -= self.offsetDelta;
         }
-        if (self.icons.size() == 0)
-            self.icons.push(zmd_PowerupIcon.create(powerup, 0, ticksLeft));
-        else
-            self.icons.push(zmd_PowerupIcon.create(powerup, self.icons[self.icons.size() - 1].offset + 2 * self.offsetDelta, ticksLeft));
-    }
+        if (self.icons.size() == 0) {
+            self.icons.push(zmd_PowerupIcon.create(power, 0));
+        } else {
+            self.icons.push(zmd_PowerupIcon.create(power, self.icons[self.icons.size() - 1].offset + 2 * self.offsetDelta));
+		}
+	}
 }
 
-class zmd_PowerupIcon : zmd_HudElement {
-    Inventory powerup;
-    int offset;
-    int ticksLeft;
+class zmd_PowerupIcon : zmd_OverlayItem {
+	const scale = 0.5;
+	const centerOffset = 11;
 
-    static zmd_PowerupIcon create(Inventory powerup, int offset, int ticksLeft) {
+    Powerup power;
+    int offset;
+	TextureId texture;
+
+    static zmd_PowerupIcon create(Powerup power, int offset) {
         let icon = new('zmd_PowerupIcon');
-        icon.powerup = powerup;
+        icon.power = power;
         icon.offset = offset;
-        icon.ticksLeft = ticksLeft;
+		icon.texture = power.icon;
         return icon;
     }
 
-    override void update() {
-        --self.ticksLeft;
+    override void update(zmd_InventoryManager manager) {
+        if (self.power.effectTics == 1) {
+			self.power = null;
+		}
     }
 
-    override void draw(zmd_Hud hud, int state, double tickFrac) {
-        if (self.powerup && !Powerup(self.powerup).isBlinking())
-            hud.drawInventoryIcon(self.powerup, (self.offset, -3), hud.di_screen_center_bottom | hud.di_item_center_bottom, scale: (0.5, 0.5));
-    }
-
-    void reset(int ticksLeft) {
-        self.ticksLeft = ticksLeft;
+    override void render(RenderEvent e) {
+        if (self.power && !self.power.isBlinking()) {
+            Screen.drawTexture(self.texture, false, zmd_Overlay.centerX - zmd_PowerupIcon.centerOffset + offset, zmd_Overlay.margin, dta_scaleX, zmd_PowerupIcon.scale, dta_scaleY, zmd_PowerupIcon.scale, dta_320x200, true);
+		}
     }
 }

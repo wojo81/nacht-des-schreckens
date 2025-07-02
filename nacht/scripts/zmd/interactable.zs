@@ -11,8 +11,9 @@ class zmd_Interactable : Actor abstract {
 
     override bool used(Actor user) {
         let player = PlayerPawn(user);
-        if (player != null && player.findInventory('zmd_LastStand') == null && self.bspecial && doUse(player))
-            zmd_HintHud(player.findInventory('zmd_HintHud')).clearMessage();
+        if (player != null && player.findInventory('zmd_LastStand') == null && self.bspecial && doUse(player)) {
+            zmd_InventoryManager.fetchFrom(player).hintOverlay.reset();
+		}
         return false;
     }
 

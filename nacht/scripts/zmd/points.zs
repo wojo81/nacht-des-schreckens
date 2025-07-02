@@ -1,6 +1,4 @@
 class zmd_Points : Inventory {
-    zmd_PointsHud hud;
-
     Default {
         Inventory.maxAmount 999999;
         +Inventory.undroppable;
@@ -9,25 +7,23 @@ class zmd_Points : Inventory {
     static bool takeFrom(PlayerPawn player, int cost) {
         if (player.countInv('zmd_Points') >= cost) {
             player.takeInventory('zmd_Points', cost);
-            zmd_PointsHud(player.findInventory('zmd_PointsHud')).addDecrease(cost);
+			zmd_InventoryManager.fetchFrom(player).pointsOverlay.deltas.push(zmd_PointsDecrease.create(cost));
             return true;
         }
         return false;
     }
 
-    override void attachToOwner(Actor owner) {
-        super.attachToOwner(owner);
-        self.hud = zmd_PointsHud(owner.findInventory('zmd_PointsHud'));
-    }
-
     override void setGiveAmount(Actor receiver, int amount, bool giveCheat) {
-        if (!giveCheat)
-            amount <<= receiver.countInv('zmd_DoublePointsPower');
-        else if (amount == 1)
-            amount = 50000;
-
-        zmd_PointsHud(receiver.findInventory('zmd_PointsHud')).addIncrease(amount);
-        super.setGiveAmount(receiver, amount, giveCheat);
+		if (receiver.findInventory('zmd_lastStand') || receiver.findInventory('zmd_Spectate')) {
+			amount = 0;
+		} else {
+			if (!giveCheat)
+				amount <<= receiver.countInv('zmd_DoublePointsPower');
+			else if (amount == 1)
+				amount = 50000;
+			zmd_InventoryManager.fetchFrom(receiver).pointsOverlay.deltas.push(zmd_PointsIncrease.create(amount));
+        }
+		super.setGiveAmount(receiver, amount, giveCheat);
     }
 }
 
@@ -50,84 +46,98 @@ class zmd_PointsHandler : EventHandler {
     }
 }
 
-class zmd_PointsHud : zmd_HudItem {
-    Array<zmd_PointDelta> pointDeltas;
+class zmd_PointsOverlay : zmd_OverlayItem {
+	const color = Font.cr_sapphire;
 
-    override void update() {
-        while (self.pointDeltas.size() && self.pointDeltas[0].ticksLeft == 0)
-            self.pointDeltas.delete(0);
-        foreach (pointDelta : self.pointDeltas)
-            pointDelta.update();
-    }
+	Font font;
+	Array<zmd_PointsDelta> deltas;
 
-    override void draw(zmd_Hud hud, int state, double tickFrac) {
-        hud.drawString(hud.defaultFont, ''..hud.cplayer.mo.countInv('zmd_Points'), (hud.margin, hud.bottom_margin), hud.di_screen_left_bottom, Font.cr_sapphire);
-        foreach (pointDelta : self.pointDeltas)
-            pointDelta.draw(hud, state, tickFrac);
-    }
+	static zmd_PointsOverlay create() {
+		let overlay = new('zmd_PointsOverlay');
+		overlay.font = bigFont;
+		return overlay;
+	}
 
-    void addIncrease(int value) {
-        let pointIncrease = new('zmd_PointIncrease');
-        pointIncrease.init(value);
-        self.pointDeltas.push(pointIncrease);
-    }
+	override void update(zmd_InventoryManager manager) {
+		while (self.deltas.size() && self.deltas[0].ticksLeft == 0) {
+			self.deltas.delete(0);
+		}
+		foreach (delta : self.deltas) {
+			delta.update(manager);
+		}
+	}
 
-    void addDecrease(int value) {
-        let pointDecrease = new('zmd_PointDecrease');
-        pointDecrease.init(value);
-        self.pointDeltas.push(pointDecrease);
-    }
+	override void render(RenderEvent e) {
+		zmd_Overlay.leftText(self.font, zmd_PointsOverlay.color, zmd_Overlay.margin, ''..players[consolePlayer].mo.countInv('zmd_Points'));
+		foreach (delta : self.deltas) {
+			delta.render(e);
+		}
+	}
 }
 
-class zmd_PointDelta : zmd_HudElement {
-    int value;
-    int color;
-    vector2 position;
-    vector2 velocity;
-    int ticksLeft;
-    double alpha;
+class zmd_PointsDelta : zmd_OverlayItem abstract {
+	const margin = zmd_Overlay.margin + 3;
+	const scale = 0.75;
+	const fadeDelay = 55;
 
-    virtual void init(int value) {
-        self.value = value;
-        self.position = (45, -13);
-        self.ticksLeft = 70;
-        self.alpha = 1.0;
-    }
+	Font font;
+	int value, color, ticksLeft;
+	Vector2 position, velocity;
+	double alpha;
 
-    override void update() {
-        self.position += self.velocity;
-        --self.ticksLeft;
-        self.alpha = self.ticksLeft / 15.0;
-    }
+	void init(int value) {
+		self.font = smallFont;
+		self.value = value;
+		self.position = (45, zmd_PointsDelta.margin);
+		self.ticksLeft = zmd_PointsDelta.fadeDelay;
+		self.alpha = 1.0;
+	}
+
+	override void update(zmd_InventoryManager manager) {
+		self.position += self.velocity;
+		--self.ticksLeft;
+		self.alpha = self.ticksLeft / double(zmd_PointsDelta.fadeDelay);
+	}
 }
 
-class zmd_PointIncrease : zmd_PointDelta {
-    override void init(int value) {
-        super.init(value);
-        if (value < 50)
-            self.color = Font.cr_gold;
+class zmd_PointsIncrease : zmd_PointsDelta {
+	const leastColor = Font.cr_gold;
+	const lowColor = Font.cr_orange;
+	const midColor = Font.cr_red;
+	const highColor = Font.cr_purple;
+
+	static zmd_PointsIncrease create(int value) {
+		let increase = new('zmd_PointsIncrease');
+		increase.init(value);
+		if (value < 50)
+            increase.color = zmd_PointsIncrease.leastColor;
         else if (value < 90)
-            self.color = Font.cr_orange;
+            increase.color = zmd_PointsIncrease.lowColor;
         else if (value < 120)
-            self.color = Font.cr_red;
+            increase.color = zmd_PointsIncrease.midColor;
         else
-            self.color = Font.cr_purple;
-        self.velocity = (frandom[pointIncrease](0.4, 1.4), frandom[pointIncrease](-0.4, 0.2));
-    }
+            increase.color = zmd_PointsIncrease.highColor;
+        increase.velocity = (frandom[pointIncrease](0.4, 1.4), frandom[pointIncrease](-0.2, 0.4));
+		return increase;
+	}
 
-    override void draw(zmd_Hud hud, int state, double tickFrac) {
-        hud.drawString(hud.defaultFont, '+'..self.value, self.position, hud.di_screen_left_bottom, self.color, alpha, scale: (0.5, 0.5));
-    }
+	override void render(RenderEvent e) {
+		Screen.drawText(self.font, self.color, self.position.x, self.position.y, '+'..self.value, dta_scaleX, self.scale, dta_scaleY, self.scale, dta_alpha, self.alpha, dta_320x200, true);
+	}
 }
 
-class zmd_PointDecrease : zmd_PointDelta {
-    override void init(int value) {
-        super.init(value);
-        self.color = Font.cr_darkRed;
-        self.velocity = (0, 0.1);
-    }
+class zmd_PointsDecrease : zmd_PointsDelta {
+	const regularColor = Font.cr_darkRed;
 
-    override void draw(zmd_Hud hud, int state, double tickFrac) {
-        hud.drawString(hud.defaultFont, '-'..self.value, self.position, hud.di_screen_left_bottom, self.color, alpha, scale: (0.5, 0.5));
-    }
+	static zmd_PointsDecrease create(int value) {
+		let decrease = zmd_PointsDecrease(new('zmd_PointsDecrease'));
+		decrease.init(value);
+		decrease.color = zmd_PointsDecrease.regularColor;
+		decrease.velocity = (0, 0.1);
+		return decrease;
+	}
+
+	override void render(RenderEvent e) {
+		Screen.drawText(self.font, self.color, self.position.x, self.position.y, '-'..self.value, dta_scaleX, self.scale, dta_scaleY, self.scale, dta_alpha, self.alpha, dta_320x200, true);
+	}
 }

@@ -32,7 +32,7 @@ class zmd_Pickup : zmd_Interactable {
         let weapon = player.player.readyWeapon;
         let manager = zmd_InventoryManager.fetchFrom(player);
         if (player.findInventory(self.item) == null && (weapon == null || weapon.getClass() != manager.fist) || manager.weapons.size() < manager.maxWeaponCount) {
-            zmd_HintHud(player.findInventory('zmd_HintHud')).setMessage('[Pickup '..getDefaultByType(self.item).getTag()..']');
+            manager.hintOverlay.set('[Pickup '..getDefaultByType(self.item).getTag()..']');
         }
     }
 

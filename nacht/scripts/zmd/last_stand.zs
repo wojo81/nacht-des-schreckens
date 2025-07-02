@@ -25,6 +25,7 @@ class zmd_LastStand : Inventory {
             console.printf("\cf"..self.owner.player.getUserName().."\cj went down!");
             self.manager = zmd_InventoryManager.fetchFrom(player);
             self.manager.switchWeapon = false;
+			self.manager.lastStand = true;
 
             player.changeTid(0);
             player.speed = self.speed;
@@ -48,6 +49,8 @@ class zmd_LastStand : Inventory {
     override void detachFromOwner() {
         let player = PlayerPawn(owner);
         if (player != null) {
+			self.manager.lastStand = false;
+
             player.speed = zmd_InventoryManager.fetchFrom(player).speed;
             player.viewHeight = player.Default.viewHeight;
             player.attackZOffset = player.Default.attackZOffset;
@@ -66,7 +69,6 @@ class zmd_LastStand : Inventory {
                 self.manager.switchWeapon = true;
                 player.a_setBlend("red", 0.4, 35 * 3);
                 player.takeInventory('zmd_Revive', 1);
-				player.setInventory('zmd_Vitality', 50);
                 player.changeTid(zmd_Player.liveTid);
                 thing_hate(zmd_Spawning.regularTid, zmd_Player.liveTid, 0);
             }
@@ -103,37 +105,36 @@ class zmd_ReviveHandle : zmd_Interactable {
     const regularReviveDuration = 35 * 5;
     const quickReviveDuration = 35 * 3;
     const minimumReviveDuration = 35;
-    const maxResetDuration = 10;
+    const maxResetDuration = 35;
 
     zmd_LastStand lastStand;
     PlayerPawn reviver;
     int reviveDuration, resetDuration;
 
     static Actor spawnFrom(zmd_LastStand lastStand) {
-        let reviveHandle = zmd_ReviveHandle(Actor.spawn('zmd_ReviveHandle', lastStand.owner.pos, allow_replace));
-        reviveHandle.lastStand = lastStand;
-        return reviveHandle;
+        let self = zmd_ReviveHandle(Actor.spawn('zmd_ReviveHandle', lastStand.owner.pos, allow_replace));
+        self.lastStand = lastStand;
+        return self;
     }
 
     override void tick() {
         super.tick();
-        self.setOrigin(lastStand.owner.pos, false);
+        self.setOrigin(self.lastStand.owner.pos, false);
         if (self.reviver != null) {
             --self.reviveDuration;
             --self.resetDuration;
             if (self.resetDuration == 0) {
-                zmd_InventoryManager(self.reviver.findInventory('zmd_InventoryManager')).reviveHud.end();
+                zmd_InventoryManager.fetchFrom(self.reviver).reviveOverlay.end();
                 self.reviver = null;
             }
         }
     }
 
     override void doTouch(PlayerPawn player) {
-        zmd_HintHud(player.findInventory('zmd_HintHud')).setMessage('[Tap to Revive]');
+        zmd_InventoryManager.fetchFrom(player).hintOverlay.set('[Tap to Revive]');
     }
 
     override bool doUse(PlayerPawn player) {
-        zmd_HintHud(player.findInventory('zmd_HintHud')).clearMessage();
         if (self.reviver != null) {
             if (self.reviveDuration <= 0) {
                 self.end();
@@ -150,29 +151,41 @@ class zmd_ReviveHandle : zmd_Interactable {
         self.resetDuration = self.maxResetDuration;
         self.reviveDuration = reviver.findInventory('zmd_QuickRevive') == null? self.regularReviveDuration: self.quickReviveDuration;
         self.reviver = reviver;
-        zmd_ReviveHud(reviver.findInventory('zmd_ReviveHud')).begin(self.reviveDuration);
+        zmd_InventoryManager.fetchFrom(self.reviver).reviveOverlay.begin(self.reviveDuration);
     }
 
     void end() {
-        zmd_ReviveHud(self.reviver.findInventory('zmd_ReviveHud')).end();
+        zmd_InventoryManager.fetchFrom(self.reviver).reviveOverlay.end();
         self.lastStand.owner.giveInventory('zmd_Revive', 1);
         self.lastStand.destroy();
     }
 }
 
-class zmd_ReviveHud : zmd_HudItem {
+class zmd_ReviveOverlay : zmd_OverlayItem {
+	const offsetY = 50;
+	const halfWidth = 41;
+
     bool active;
     int duration, maxDuration;
+	TextureId fore, back;
 
-    override void update() {
+	static zmd_ReviveOverlay create() {
+		let self = new('zmd_ReviveOverlay');
+		self.fore = TexMan.checkForTexture('revfore');
+		self.back = TexMan.checkForTexture('revback');
+		return self;
+	}
+
+    override void update(zmd_InventoryManager manager) {
         if (self.active && self.duration != 0) {
             --self.duration;
         }
     }
 
-    override void draw(zmd_Hud hud, int state, double tickFrac) {
+    override void render(RenderEvent e) {
         if (self.active) {
-            hud.drawBar('revback', 'revfore', self.duration, self.maxDuration, (0, -30), 1, 0, hud.di_screen_center_bottom);
+			Screen.drawTexture(self.back, false, zmd_Overlay.centerX - zmd_ReviveOverlay.halfWidth, zmd_Overlay.height - zmd_Overlay.margin - zmd_ReviveOverlay.offsetY, dta_320x200, true);
+            Screen.drawTexture(self.fore, false, zmd_Overlay.centerX - zmd_ReviveOverlay.halfWidth, zmd_Overlay.height - zmd_Overlay.margin - zmd_ReviveOverlay.offsetY, dta_scaleX, double(self.maxDuration - self.duration) / self.maxDuration, dta_320x200, true);
         }
     }
 

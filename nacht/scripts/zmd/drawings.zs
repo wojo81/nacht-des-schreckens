@@ -31,12 +31,13 @@ class zmd_Drawing : zmd_Interactable {
 
     override void doTouch(PlayerPawn player) {
 		let manager = zmd_InventoryManager.fetchFrom(player);
-        if (player.countInv(self.weapon) != 0)
-            zmd_HintHud(player.findInventory('zmd_HintHud')).setMessage(self.ammoMessage);
-        else if (player.countInv(self.upgradedWeapon))
-            zmd_HintHud(player.findInventory('zmd_HintHud')).setMessage(self.upgradedAmmoMessage);
-        else if ((player.player.readyWeapon == null || player.player.readyWeapon.getClass() != manager.fist) || manager.weapons.size() < manager.maxWeaponCount)
-            zmd_HintHud(player.findInventory('zmd_HintHud')).setMessage(self.weaponMessage);
+        if (player.findInventory(self.weapon)) {
+			manager.hintOverlay.set(self.ammoMessage);
+		} else if (player.findInventory(self.upgradedWeapon)) {
+            manager.hintOverlay.set(self.upgradedAmmoMessage);
+		} else if ((player.player.readyWeapon == null || player.player.readyWeapon.getClass() != manager.fist) || manager.weapons.size() < manager.maxWeaponCount) {
+            manager.hintOverlay.set(self.weaponMessage);
+		}
     }
 
     override bool doUse(PlayerPawn player) {

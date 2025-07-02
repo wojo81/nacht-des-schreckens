@@ -1,4 +1,4 @@
-class zmd_Barrel : ExplosiveBarrel {
+class nacht_Barrel : ExplosiveBarrel {
     States {
     Death:
         BEXP A 5 Bright;

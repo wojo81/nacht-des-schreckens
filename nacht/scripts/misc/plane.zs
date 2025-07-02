@@ -1,4 +1,4 @@
-class zmd_Plane : Actor {
+class nacht_Plane : Actor {
     Default {
         +solid
     }

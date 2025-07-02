@@ -45,11 +45,6 @@ class zmd_Juggernog : zmd_Perk {
     override void detachFromOwner() {
 		let vitality = getDefaultByType('zmd_Vitality').amount;
         self.regen.maxHealth = vitality;
-        if (self.owner.health > vitality) {
-            self.owner.a_damageSelf(self.owner.health - vitality + 50);
-        } else if (self.owner.health < vitality) {
-			self.regen.shouldHeal = true;
-		}
         super.detachFromOwner();
     }
 }
